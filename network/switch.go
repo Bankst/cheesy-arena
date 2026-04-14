@@ -1,7 +1,7 @@
 // Copyright 2014 Team 254. All Rights Reserved.
 // Author: pat@patfairbank.com (Patrick Fairbank)
 //
-// Methods for configuring a Cisco Switch 3500-series switch for team VLANs.
+// Methods for configuring a Cisco Catalyst 3500-series switch for team VLANs.
 
 package network
 
@@ -9,10 +9,11 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"github.com/Team254/cheesy-arena/model"
 	"net"
 	"sync"
 	"time"
+
+	"github.com/Team254/cheesy-arena/model"
 )
 
 const (
@@ -31,37 +32,47 @@ const (
 	blue3Vlan = 60
 )
 
-type Switch struct {
+// NetworkSwitch defines the interface for configuring team VLANs on a managed switch.
+type NetworkSwitch interface {
+	ConfigureTeamEthernet(teams [6]*model.Team) error
+	GetStatus() string
+}
+
+type CiscoSwitch struct {
 	address               string
 	port                  int
 	password              string
 	mutex                 sync.Mutex
 	configBackoffDuration time.Duration
 	configPauseDuration   time.Duration
-	Status                string
+	status                string
 }
 
 const DefaultServerIpAddress = "10.0.100.5"
 
 var ServerIpAddress = DefaultServerIpAddress // The DS will try to connect to this address only.
 
-func NewSwitch(address, password string) *Switch {
-	return &Switch{
+func NewCiscoSwitch(address, password string) *CiscoSwitch {
+	return &CiscoSwitch{
 		address:               address,
 		port:                  switchTelnetPort,
 		password:              password,
 		configBackoffDuration: switchConfigBackoffDurationSec * time.Second,
 		configPauseDuration:   switchConfigPauseDurationSec * time.Second,
-		Status:                "UNKNOWN",
+		status:                "UNKNOWN",
 	}
 }
 
+func (sw *CiscoSwitch) GetStatus() string {
+	return sw.status
+}
+
 // Sets up wired networks for the given set of teams.
-func (sw *Switch) ConfigureTeamEthernet(teams [6]*model.Team) error {
+func (sw *CiscoSwitch) ConfigureTeamEthernet(teams [6]*model.Team) error {
 	// Make sure multiple configurations aren't being set at the same time.
 	sw.mutex.Lock()
 	defer sw.mutex.Unlock()
-	sw.Status = "CONFIGURING"
+	sw.status = "CONFIGURING"
 
 	// Remove old team VLANs to reset the switch state.
 	removeTeamVlansCommand := ""
@@ -72,7 +83,7 @@ func (sw *Switch) ConfigureTeamEthernet(teams [6]*model.Team) error {
 	}
 	_, err := sw.runConfigCommand(removeTeamVlansCommand)
 	if err != nil {
-		sw.Status = "ERROR"
+		sw.status = "ERROR"
 		return err
 	}
 	time.Sleep(sw.configPauseDuration)
@@ -114,7 +125,7 @@ func (sw *Switch) ConfigureTeamEthernet(teams [6]*model.Team) error {
 	if len(addTeamVlansCommand) > 0 {
 		_, err = sw.runConfigCommand(addTeamVlansCommand)
 		if err != nil {
-			sw.Status = "ERROR"
+			sw.status = "ERROR"
 			return err
 		}
 	}
@@ -122,13 +133,13 @@ func (sw *Switch) ConfigureTeamEthernet(teams [6]*model.Team) error {
 	// Give some time for the configuration to take before another one can be attempted.
 	time.Sleep(sw.configBackoffDuration)
 
-	sw.Status = "ACTIVE"
+	sw.status = "ACTIVE"
 	return nil
 }
 
 // Logs into the switch via Telnet and runs the given command in user exec mode. Reads the output and
 // returns it as a string.
-func (sw *Switch) runCommand(command string) (string, error) {
+func (sw *CiscoSwitch) runCommand(command string) (string, error) {
 	// Open a Telnet connection to the switch.
 	conn, err := net.Dial("tcp", fmt.Sprintf("%s:%d", sw.address, sw.port))
 	if err != nil {
@@ -163,6 +174,6 @@ func (sw *Switch) runCommand(command string) (string, error) {
 
 // Logs into the switch via Telnet and runs the given command in global configuration mode. Reads the output
 // and returns it as a string.
-func (sw *Switch) runConfigCommand(command string) (string, error) {
+func (sw *CiscoSwitch) runConfigCommand(command string) (string, error) {
 	return sw.runCommand(fmt.Sprintf("config terminal\n%send\n", command))
 }

@@ -55,7 +55,8 @@ type Arena struct {
 	Database         *model.Database
 	EventSettings    *model.EventSettings
 	accessPoint      network.AccessPoint
-	networkSwitch    *network.Switch
+	networkSwitch    network.NetworkSwitch
+	dhcpServer       *network.DhcpServer
 	redSCC           *network.SCCSwitch
 	blueSCC          *network.SCCSwitch
 	Plc              plc.Plc
@@ -189,7 +190,19 @@ func (arena *Arena) LoadSettings() error {
 		settings.NetworkSecurityEnabled,
 		accessPointWifiStatuses,
 	)
-	arena.networkSwitch = network.NewSwitch(settings.SwitchAddress, settings.SwitchPassword)
+	switch settings.SwitchType {
+	case "hp":
+		arena.networkSwitch = network.NewHPSwitch(
+			settings.SwitchAddress, settings.SwitchPassword, network.ServerIpAddress,
+		)
+		if arena.dhcpServer == nil {
+			arena.dhcpServer = network.NewDhcpServer(network.ServerIpAddress)
+			go arena.dhcpServer.Run()
+		}
+	default:
+		arena.networkSwitch = network.NewCiscoSwitch(settings.SwitchAddress, settings.SwitchPassword)
+		arena.dhcpServer = nil
+	}
 	sccUpCommands := strings.Split(settings.SCCUpCommands, "\n")
 	sccDownCommands := strings.Split(settings.SCCDownCommands, "\n")
 	arena.redSCC = network.NewSCCSwitch(
@@ -973,6 +986,9 @@ func (arena *Arena) setupNetwork(teams [6]*model.Team, isPreload bool) {
 	if arena.EventSettings.NetworkSecurityEnabled {
 		if err := arena.accessPoint.ConfigureTeamWifi(teams); err != nil {
 			log.Printf("Failed to configure team WiFi: %s", err.Error())
+		}
+		if arena.dhcpServer != nil {
+			arena.dhcpServer.ConfigureTeamPools(teams)
 		}
 		go func() {
 			arena.setSCCEthernetEnabled(false)

@@ -1,0 +1,104 @@
+; Baseline configuration for the HP ProCurve 2810-24G switch. Load this into the switch prior to
+; configuring Cheesy Arena to connect to it. Default password is 1234Five.
+;
+; The ProCurve 2810-24G does not have a built-in DHCP server. Cheesy Arena runs an embedded DHCP
+; server and the switch relays DHCP requests via ip helper-address (configured automatically by
+; the software on each team VLAN).
+;
+; Port assignments (matching the Cisco Catalyst baseline):
+;   Ports 1-6:   Trunk ports (tagged VLANs 10-60, untagged VLAN 100)
+;   Ports 7-10:  Management (VLAN 100)
+;   Port 11:     Red 1  (VLAN 10)
+;   Port 12:     Blue 1 (VLAN 40)
+;   Port 13:     Red 2  (VLAN 20)
+;   Port 14:     Blue 2 (VLAN 50)
+;   Port 15:     Red 3  (VLAN 30)
+;   Port 16:     Blue 3 (VLAN 60)
+;   Ports 17-24: Management (VLAN 100)
+
+hostname "ChezySwitch"
+no snmp-server community "public"
+snmp-server community "1234Five"
+spanning-tree
+
+password manager "1234Five"
+
+ip routing
+
+vlan 1
+   name "DEFAULT_VLAN"
+   no untagged 1-24
+   no ip address
+   exit
+
+vlan 10
+   name "Red1"
+   untagged 11
+   tagged 1-6
+   exit
+
+vlan 20
+   name "Red2"
+   untagged 13
+   tagged 1-6
+   exit
+
+vlan 30
+   name "Red3"
+   untagged 15
+   tagged 1-6
+   exit
+
+vlan 40
+   name "Blue1"
+   untagged 12
+   tagged 1-6
+   exit
+
+vlan 50
+   name "Blue2"
+   untagged 14
+   tagged 1-6
+   exit
+
+vlan 60
+   name "Blue3"
+   untagged 16
+   tagged 1-6
+   exit
+
+vlan 100
+   name "Management"
+   untagged 7-10,17-24
+   tagged 1-6
+   ip address 10.0.100.3 255.255.255.0
+   exit
+
+ip route 0.0.0.0 0.0.0.0 10.0.100.1
+
+ip access-list extended "DS-FMS"
+   permit udp 0.0.0.0 255.255.255.255 eq 1145 10.0.100.0 0.0.0.255 eq 1160
+   permit tcp 0.0.0.0 255.255.255.255 10.0.100.0 0.0.0.255 eq 1750
+   permit icmp 0.0.0.0 255.255.255.255 10.0.100.0 0.0.0.255
+   permit udp 0.0.0.0 255.255.255.255 0.0.0.0 255.255.255.255 eq 67
+   permit udp 0.0.0.0 255.255.255.255 0.0.0.0 255.255.255.255 eq 68
+   exit
+
+vlan 10
+   ip access-group "DS-FMS" in
+   exit
+vlan 20
+   ip access-group "DS-FMS" in
+   exit
+vlan 30
+   ip access-group "DS-FMS" in
+   exit
+vlan 40
+   ip access-group "DS-FMS" in
+   exit
+vlan 50
+   ip access-group "DS-FMS" in
+   exit
+vlan 60
+   ip access-group "DS-FMS" in
+   exit
