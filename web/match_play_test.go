@@ -417,6 +417,47 @@ func TestMatchPlayWebsocketLoadMatch(t *testing.T) {
 	assert.Contains(t, readWebsocketError(t, ws), "invalid match ID 254")
 }
 
+func TestMatchPlayWebsocketQuickPlayMatch(t *testing.T) {
+	web := setupTestWeb(t)
+
+	server, wsUrl := web.startTestServer()
+	defer server.Close()
+	conn, _, err := gorillawebsocket.DefaultDialer.Dial(wsUrl+"/match_play/websocket", nil)
+	assert.Nil(t, err)
+	defer conn.Close()
+	ws := websocket.NewTestWebsocket(conn)
+
+	// Should get a few status updates right after connection.
+	readWebsocketMultiple(t, ws, 10)
+
+	// Quick Play should load a test match with arbitrary team numbers, even if they are not in the database.
+	ws.Write("quickPlayMatch", map[string]int{
+		"Red1": 111, "Red2": 222, "Red3": 333, "Blue1": 444, "Blue2": 555, "Blue3": 666,
+	})
+	readWebsocketType(t, ws, "matchLoad")
+	readWebsocketMultiple(t, ws, 3)
+	assert.Equal(t, model.Test, web.arena.CurrentMatch.Type)
+	assert.Equal(t, "Test Match", web.arena.CurrentMatch.LongName)
+	assert.Equal(t, 111, web.arena.CurrentMatch.Red1)
+	assert.Equal(t, 222, web.arena.CurrentMatch.Red2)
+	assert.Equal(t, 333, web.arena.CurrentMatch.Red3)
+	assert.Equal(t, 444, web.arena.CurrentMatch.Blue1)
+	assert.Equal(t, 555, web.arena.CurrentMatch.Blue2)
+	assert.Equal(t, 666, web.arena.CurrentMatch.Blue3)
+	assert.Equal(t, 111, web.arena.AllianceStations["R1"].Team.Id)
+	assert.Equal(t, 666, web.arena.AllianceStations["B3"].Team.Id)
+
+	// Empty slots (team ID 0) are allowed and leave the station unassigned.
+	ws.Write("quickPlayMatch", map[string]int{
+		"Red1": 254, "Red2": 0, "Red3": 0, "Blue1": 0, "Blue2": 0, "Blue3": 0,
+	})
+	readWebsocketType(t, ws, "matchLoad")
+	readWebsocketMultiple(t, ws, 3)
+	assert.Equal(t, 254, web.arena.CurrentMatch.Red1)
+	assert.Equal(t, 0, web.arena.CurrentMatch.Red2)
+	assert.Nil(t, web.arena.AllianceStations["R2"].Team)
+}
+
 func TestMatchPlayWebsocketShowAndClearResult(t *testing.T) {
 	web := setupTestWeb(t)
 

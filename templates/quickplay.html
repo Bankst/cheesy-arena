@@ -1,0 +1,126 @@
+{{/*
+Stripped match-play UI for quickly starting a test match with arbitrary teams.
+Reuses element IDs from match_play.html so match_play.js handlers work unchanged.
+*/}}
+{{define "title"}}Quick Play{{end}}
+{{define "body"}}
+<div class="row">
+  <div class="col-lg-12">
+    <div class="row text-center mb-2">
+      <div id="matchName" class="col-lg-3 card card-body bg-body-tertiary"
+        style="text-transform: uppercase;">&nbsp;
+      </div>
+      <div id="matchState" class="col-lg-3 card card-body bg-body-tertiary">&nbsp;</div>
+      <div id="matchTime" class="col-lg-2 card card-body bg-body-tertiary">&nbsp;</div>
+      <div id="redScore" class="col-lg-2 card card-body bg-red">&nbsp;</div>
+      <div id="blueScore" class="col-lg-2 card card-body bg-blue">&nbsp;</div>
+    </div>
+    <div class="card card-body bg-body-tertiary mb-3">
+      <div class="row align-items-center">
+        <div class="col-lg-5">
+          <div class="row g-2 text-center">
+            <div class="col-4 bg-red rounded p-1"><small>R1</small>
+              <input type="number" id="qpRed1" class="form-control form-control-sm text-center" placeholder="team #">
+            </div>
+            <div class="col-4 bg-red rounded p-1"><small>R2</small>
+              <input type="number" id="qpRed2" class="form-control form-control-sm text-center" placeholder="team #">
+            </div>
+            <div class="col-4 bg-red rounded p-1"><small>R3</small>
+              <input type="number" id="qpRed3" class="form-control form-control-sm text-center" placeholder="team #">
+            </div>
+          </div>
+        </div>
+        <div class="col-lg-2 text-center">
+          <button type="button" id="quickPlayLoad" class="btn btn-primary" onclick="quickPlayMatch();">
+            Load &amp; Arm
+          </button>
+        </div>
+        <div class="col-lg-5">
+          <div class="row g-2 text-center">
+            <div class="col-4 bg-blue rounded p-1"><small>B1</small>
+              <input type="number" id="qpBlue1" class="form-control form-control-sm text-center" placeholder="team #">
+            </div>
+            <div class="col-4 bg-blue rounded p-1"><small>B2</small>
+              <input type="number" id="qpBlue2" class="form-control form-control-sm text-center" placeholder="team #">
+            </div>
+            <div class="col-4 bg-blue rounded p-1"><small>B3</small>
+              <input type="number" id="qpBlue3" class="form-control form-control-sm text-center" placeholder="team #">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="row text-center">
+      <div class="col-lg-6 card card-body bg-blue mb-2">
+        <div class="row mb-3">
+          <div class="col-lg-4">Blue Teams</div>
+          <div class="col-lg-2" data-bs-toggle="tooltip" title="Driver Station Status">DS</div>
+          <div class="col-lg-2" data-bs-toggle="tooltip" title="Radio Status">Rad</div>
+          <div class="col-lg-2" data-bs-toggle="tooltip" title="Robot Status">Rbt</div>
+          <div class="col-lg-2" data-bs-toggle="tooltip" title="Bypass/Disable">Byp</div>
+        </div>
+        {{template "quickPlayTeam" dict "color" "B" "position" 1}}
+        {{template "quickPlayTeam" dict "color" "B" "position" 2}}
+        {{template "quickPlayTeam" dict "color" "B" "position" 3}}
+      </div>
+      <div class="col-lg-6 card card-body bg-red mb-2">
+        <div class="row mb-3">
+          <div class="col-lg-4">Red Teams</div>
+          <div class="col-lg-2" data-bs-toggle="tooltip" title="Driver Station Status">DS</div>
+          <div class="col-lg-2" data-bs-toggle="tooltip" title="Radio Status">Rad</div>
+          <div class="col-lg-2" data-bs-toggle="tooltip" title="Robot Status">Rbt</div>
+          <div class="col-lg-2" data-bs-toggle="tooltip" title="Bypass/Disable">Byp</div>
+        </div>
+        {{template "quickPlayTeam" dict "color" "R" "position" 3}}
+        {{template "quickPlayTeam" dict "color" "R" "position" 2}}
+        {{template "quickPlayTeam" dict "color" "R" "position" 1}}
+      </div>
+    </div>
+    <div class="row justify-content-center mt-1">
+      <button type="button" id="startMatch" class="btn btn-success btn-match-play ms-1"
+        onclick="startMatch();" disabled>
+        Start Match
+      </button>
+      <button type="button" id="abortMatch" class="btn btn-danger btn-match-play ms-1"
+        onclick="abortMatch();" disabled>
+        Abort Match
+      </button>
+    </div>
+    <div class="row justify-content-center mt-3">
+      <div class="col-lg-4 text-center">
+        <div class="checkbox">
+          <label>
+            <input type="checkbox" id="muteMatchSounds">
+            Mute Match Sounds
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{{end}}
+{{define "script"}}
+<script src="/static/js/match_timing.js"></script>
+<script src="/static/js/match_play.js"></script>
+<script src="/static/js/quickplay.js"></script>
+{{end}}
+{{define "quickPlayTeam"}}
+<div class="row mb-2" id="status{{.color}}{{.position}}">
+  <div class="col-lg-1">{{.position}}</div>
+  <div class="col-lg-3">
+    <input type="number" class="team-number form-control" disabled>
+  </div>
+  <div class="col-lg-2 col-no-padding">
+    <div class="ds-status" data-bs-toggle="tooltip" title="Bandwidth Consumed"></div>
+  </div>
+  <div class="col-lg-2 col-no-padding">
+    <div class="radio-status" data-bs-toggle="tooltip" title="AP SSID"></div>
+  </div>
+  <div class="col-lg-2 col-no-padding">
+    <div class="robot-status" data-bs-toggle="tooltip" title="Battery / Time Since Link Lost"></div>
+  </div>
+  <div class="col-lg-2 col-no-padding">
+    <div class="bypass-status" onclick="toggleBypass('{{.color}}{{.position}}');"></div>
+  </div>
+</div>
+{{end}}

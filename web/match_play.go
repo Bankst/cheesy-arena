@@ -248,6 +248,43 @@ func (web *Web) matchPlayWebsocketHandler(w http.ResponseWriter, r *http.Request
 				ws.WriteError(err.Error())
 				continue
 			}
+		case "quickPlayMatch":
+			// Loads a test match with the supplied teams in one step, skipping the database-presence check used by
+			// SubstituteTeams so that arbitrary team numbers can be used without being imported first.
+			args := struct {
+				Red1  int
+				Red2  int
+				Red3  int
+				Blue1 int
+				Blue2 int
+				Blue3 int
+			}{}
+			err = mapstructure.Decode(data, &args)
+			if err != nil {
+				ws.WriteError(err.Error())
+				continue
+			}
+			err = web.arena.ResetMatch()
+			if err != nil {
+				ws.WriteError(err.Error())
+				continue
+			}
+			match := &model.Match{
+				Type:      model.Test,
+				ShortName: "T",
+				LongName:  "Test Match",
+				Red1:      args.Red1,
+				Red2:      args.Red2,
+				Red3:      args.Red3,
+				Blue1:     args.Blue1,
+				Blue2:     args.Blue2,
+				Blue3:     args.Blue3,
+			}
+			err = web.arena.LoadMatch(match)
+			if err != nil {
+				ws.WriteError(err.Error())
+				continue
+			}
 		case "toggleBypass":
 			station, ok := data.(string)
 			if !ok {

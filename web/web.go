@@ -172,6 +172,7 @@ func (web *Web) newHandler() http.Handler {
 	mux.HandleFunc("GET /match_play", web.matchPlayHandler)
 	mux.HandleFunc("GET /match_play/match_load", web.matchPlayMatchLoadHandler)
 	mux.HandleFunc("GET /match_play/websocket", web.matchPlayWebsocketHandler)
+	mux.HandleFunc("GET /quickplay", web.quickPlayHandler)
 	mux.HandleFunc("GET /match_logs", web.matchLogsHandler)
 	mux.HandleFunc("GET /match_logs/{matchId}/{stationId}/log", web.matchLogsViewGetHandler)
 	mux.HandleFunc("GET /match_review", web.matchReviewHandler)
